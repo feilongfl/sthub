@@ -230,10 +230,10 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 LDSCRIPT = STM32G431RBTx_FLASH.ld
 
 # libraries
-LIBS = -lc -lm -lnosys  \
--lUSBPDCORE_PD3_FULL_CM4_wc32.a
-LIBDIR =  \
--LMiddlewares/ST/STM32_USBPD_Library/Core/lib
+LIBS = -lc -lm -lnosys \
+Middlewares/ST/STM32_USBPD_Library/Core/lib/USBPDCORE_PD3_FULL_CM4_wc32.a
+
+LIBDIR = 
 LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 
 # default action: build all

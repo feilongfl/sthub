@@ -1008,7 +1008,7 @@ void CAD_Check_HW_SRC(uint8_t PortNum)
 }
 #endif /* _DRP || _SRC */
 
-#if defined(_SNK)
+#if defined(_DRP) || defined(_SNK)
 static uint32_t ManageStateDetached_SNK(uint8_t PortNum)
 {
   CAD_HW_HandleTypeDef *_handle = &CAD_HW_Handles[PortNum];
@@ -1030,7 +1030,7 @@ static uint32_t ManageStateDetached_SNK(uint8_t PortNum)
          )
     {
       /* A Sink with Accessory support shall transition to Unattached.Accessory within tDRPTransition
-      after the state of both the CC1 and CC2 pins is SNK.Open for tDRP - dcSRC.DRP · tDRP, or if directed.*/
+      after the state of both the CC1 and CC2 pins is SNK.Open for tDRP - dcSRC.DRP ï¿½ tDRP, or if directed.*/
       if ( (HAL_GetTick() - _handle->CAD_tToggle_start) > CAD_ACCESSORY_TOGGLE)
       {
         _handle->cstate = USBPD_CAD_STATE_UNATTACHED_ACCESSORY;
