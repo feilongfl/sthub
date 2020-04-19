@@ -61,6 +61,8 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -69,18 +71,26 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define B1_Pin GPIO_PIN_13
-#define B1_GPIO_Port GPIOC
+#define USRButton_Pin GPIO_PIN_13
+#define USRButton_GPIO_Port GPIOC
+#define USBKVM0_Pin GPIO_PIN_0
+#define USBKVM0_GPIO_Port GPIOC
+#define USBKVM1_Pin GPIO_PIN_1
+#define USBKVM1_GPIO_Port GPIOC
+#define USBKVM2_Pin GPIO_PIN_2
+#define USBKVM2_GPIO_Port GPIOC
+#define USRSel_Pin GPIO_PIN_3
+#define USRSel_GPIO_Port GPIOC
 #define LPUART1_TX_Pin GPIO_PIN_2
 #define LPUART1_TX_GPIO_Port GPIOA
 #define LPUART1_RX_Pin GPIO_PIN_3
 #define LPUART1_RX_GPIO_Port GPIOA
-#define LD2_Pin GPIO_PIN_5
-#define LD2_GPIO_Port GPIOA
 #define T_SWDIO_Pin GPIO_PIN_13
 #define T_SWDIO_GPIO_Port GPIOA
 #define T_SWCLK_Pin GPIO_PIN_14
 #define T_SWCLK_GPIO_Port GPIOA
+#define USRLed_Pin GPIO_PIN_2
+#define USRLed_GPIO_Port GPIOD
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
