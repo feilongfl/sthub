@@ -1,0 +1,17 @@
+name: Cpp Check
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: C++ code linter (clang-tidy and cppcheck)
+      uses: smay1613/cpp-linter-action@0.0.2
+    - name: cppcheck
+      run: cppcheck -i prj -j `nproc` --enable=all .
