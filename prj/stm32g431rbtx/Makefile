@@ -24,6 +24,14 @@ DEBUG = 1
 # optimization
 OPT = -Og
 
+# release mode when ci.
+ifdef GITHUB_ACTION
+	# debug build?
+	DEBUG = 0
+	# optimization
+	OPT = -Ofast
+endif
+
 
 #######################################
 # paths

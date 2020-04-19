@@ -3,10 +3,12 @@ NPROC=$(shell nproc)
 
 stm32g431:
 	cd prj/stm32g431rbtx && make -j $(NPROC)
+ifndef GITHUB_ACTION
 	mkdir -p build/stm32g431rbtx
 	cp prj/stm32g431rbtx/build/sthub.elf build/stm32g431rbtx/
 	cp prj/stm32g431rbtx/build/sthub.bin build/stm32g431rbtx/
 	cp prj/stm32g431rbtx/build/sthub.map build/stm32g431rbtx/
+endif
 
 stm32g431_clean:
 	cd prj/stm32g431rbtx && make clean
