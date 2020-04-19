@@ -21,6 +21,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbpd.h"
+#include "gui_api.h"
 
 /* USER CODE BEGIN 0 */
 /* USER CODE END 0 */
@@ -29,8 +30,12 @@
 /* USER CODE END 1 */
 
 /* Private variables ---------------------------------------------------------*/
+const uint8_t HWBoardVersionName[] = "G4_HUB";
+const uint8_t PDTypeName[] = "MB1360";
 
 /* Private functions ---------------------------------------------------------*/
+static const uint8_t*          GetHWBoardVersionName(void);
+static const uint8_t*          GetPDTypeName(void);
 
 /* USER CODE BEGIN 2 */
 /* USER CODE END 2 */
@@ -47,6 +52,9 @@ void MX_USBPD_Init(void)
   {
     while(1);
   }
+
+  /* Initialize GUI before retrieving PDO from RAM */
+  GUI_Init(GetHWBoardVersionName, GetPDTypeName, HW_IF_PWR_GetVoltage, HW_IF_PWR_GetCurrent);
 
   /* Initialise the DPM application */
   if (USBPD_OK != USBPD_DPM_UserInit())
@@ -67,6 +75,23 @@ void MX_USBPD_Init(void)
   __enable_irq();
   /* USER CODE END EnableIRQ */
 
+}
+/**
+  * @brief  This method returns HW board version name
+  * @retval HW Board version name
+  */
+static const uint8_t* GetHWBoardVersionName(void)
+{
+  return HWBoardVersionName;
+}
+
+/**
+  * @brief  This method returns HW PD Type name
+  * @retval HW Board version name
+  */
+static const uint8_t* GetPDTypeName(void)
+{
+  return PDTypeName;
 }
 
 /* USER CODE BEGIN 4 */

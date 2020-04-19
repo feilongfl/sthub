@@ -50,12 +50,14 @@ extern uint32_t HAL_GetTick(void);
 
 void USBPD_PE_Task(void const *argument);
 void USBPD_CAD_Task(void const *argument);
+void USBPD_TRACE_TX_Task(void const *argument);
 #else /* osCMSIS >= 0x20000U */
 
 void USBPD_PE_Task_P0(void *argument);
 void USBPD_PE_Task_P1(void *argument);
 static void PE_Task(uint32_t PortNum);
 void USBPD_CAD_Task(void *argument);
+void USBPD_TRACE_TX_Task(void *argument);
 #endif /* osCMSIS < 0x20000U */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,12 +70,16 @@ void USBPD_CAD_Task(void *argument);
 #define FREERTOS_PE_STACK_SIZE                  (200 * DPM_STACK_SIZE_ADDON_FOR_CMSIS)
 #define FREERTOS_CAD_PRIORITY                   osPriorityRealtime
 #define FREERTOS_CAD_STACK_SIZE                 (300 * DPM_STACK_SIZE_ADDON_FOR_CMSIS)
+#define FREERTOS_TRACE_PRIORITY                 osPriorityLow
+#define FREERTOS_TRACE_STACK_SIZE               (60 * DPM_STACK_SIZE_ADDON_FOR_CMSIS)
 #if (osCMSIS < 0x20000U)
 osThreadDef(PE_0, USBPD_PE_Task, FREERTOS_PE_PRIORITY, 0, FREERTOS_PE_STACK_SIZE);
 osThreadDef(PE_1, USBPD_PE_Task, FREERTOS_PE_PRIORITY, 0, FREERTOS_PE_STACK_SIZE);
 osMessageQDef(queuePE, 1, uint16_t);
 osThreadDef(CAD, USBPD_CAD_Task, FREERTOS_CAD_PRIORITY, 0, FREERTOS_CAD_STACK_SIZE);
 osMessageQDef(queueCAD, 2, uint16_t);
+osThreadDef(TRA_TX, USBPD_TRACE_TX_Task, FREERTOS_TRACE_PRIORITY, 0, FREERTOS_TRACE_STACK_SIZE);
+osMessageQDef(queueTRACE, 1, uint16_t);
 
 #else /* osCMSIS >= 0x20000U */
 
@@ -94,6 +100,11 @@ osThreadAttr_t CAD_Thread_Atrr = {
   .stack_size = FREERTOS_CAD_STACK_SIZE
 };
 
+osThreadAttr_t TRA_Thread_Atrr = {
+  .name       = "TRA_TX",
+  .priority   = FREERTOS_TRACE_PRIORITY, /*osPriorityLow,*/
+  .stack_size = FREERTOS_TRACE_STACK_SIZE
+};
 #endif /* osCMSIS < 0x20000U */
 
 /* Private define ------------------------------------------------------------*/
@@ -120,6 +131,7 @@ osThreadAttr_t CAD_Thread_Atrr = {
 /* Private variables ---------------------------------------------------------*/
 static osThreadId DPM_Thread_Table[MAX_THREAD_NB];
 static osMessageQId PEQueueId[USBPD_PORT_COUNT], CADQueueId;
+static osMessageQId TraceQueueId;
 
 USBPD_ParamsTypeDef   DPM_Params[USBPD_PORT_COUNT];
 
@@ -128,6 +140,7 @@ void USBPD_DPM_CADCallback(uint8_t PortNum, USBPD_CAD_EVENT State, CCxPin_TypeDe
 static void USBPD_PE_TaskWakeUp(uint8_t PortNum);
 static void DPM_ManageAttachedState(uint8_t PortNum, USBPD_CAD_EVENT State, CCxPin_TypeDef Cc);
 static void USBPD_DPM_CADTaskWakeUp(void);
+void USBPD_DPM_TraceWakeUp(void);
 
 /**
   * @brief  Initialize the core stack (port power role, PWR_IF, CAD and PE Init procedures)
@@ -197,6 +210,9 @@ USBPD_StatusTypeDef USBPD_DPM_InitCore(void)
   DPM_Params[USBPD_PORT_1].VconnStatus      = USBPD_FALSE;
 #endif /* USBPD_PORT_COUNT == 2 */
 
+  /* Initialise the TRACE */
+  USBPD_TRACE_Init();
+
   /* CAD SET UP : Port 0 */
   CHECK_CAD_FUNCTION_CALL(USBPD_CAD_Init(USBPD_PORT_0, (USBPD_CAD_Callbacks *)&CAD_cbs, (USBPD_SettingsTypeDef *)&DPM_Settings[USBPD_PORT_0], &DPM_Params[USBPD_PORT_0]));
 #if USBPD_PORT_COUNT == 2
@@ -236,6 +252,17 @@ USBPD_StatusTypeDef USBPD_DPM_InitOS(void)
 #else
   CADQueueId = osMessageQueueNew (2, sizeof(uint16_t), NULL);
   if (NULL == osThreadNew(USBPD_CAD_Task, &CADQueueId, &CAD_Thread_Atrr))
+#endif /* osCMSIS < 0x20000U */
+  {
+    return USBPD_ERROR;
+  }
+
+#if (osCMSIS < 0x20000U)
+  TraceQueueId = osMessageCreate(osMessageQ(queueTRACE), NULL);
+  if(NULL == osThreadCreate(osThread(TRA_TX), NULL))
+#else
+  TraceQueueId = osMessageQueueNew (1, sizeof(uint16_t), NULL);
+  if (NULL == osThreadNew(USBPD_TRACE_TX_Task, &TraceQueueId, &TRA_Thread_Atrr))
 #endif /* osCMSIS < 0x20000U */
   {
     return USBPD_ERROR;
@@ -410,6 +437,45 @@ void USBPD_CAD_Task(void *argument)
 }
 
 /**
+  * @brief  Main task for TRACE TX layer
+  * @param  argument Not used
+  * @retval None
+  */
+#if (osCMSIS < 0x20000U)
+void USBPD_TRACE_TX_Task(void const *argument)
+#else
+void USBPD_TRACE_TX_Task(void *argument)
+#endif /* osCMSIS < 0x20000U */
+{
+  for(;;)
+  {
+#if (osCMSIS < 0x20000U)
+    osMessageGet(TraceQueueId,USBPD_TRACE_TX_Process());
+#else
+    uint32_t event;
+    (void)osMessageQueueGet(TraceQueueId, &event, NULL, USBPD_TRACE_TX_Process());
+#endif /* osCMSIS < 0x20000U */
+  }
+}
+
+/**
+  * @brief  WakeUp TRACE task
+  * @retval None
+  */
+void USBPD_DPM_TraceWakeUp(void)
+{
+  if (NULL != TraceQueueId)
+  {
+#if (osCMSIS < 0x20000U)
+    (void)osMessagePut(TraceQueueId, 0xFFFF, 0);
+#else
+    uint32_t event = 0xFFFFU;
+    (void)osMessageQueuePut(TraceQueueId, &event, 0U, 0U);
+#endif /* osCMSIS < 0x20000U */
+  }
+}
+
+/**
   * @brief  CallBack reporting events on a specified port from CAD layer.
   * @param  PortNum   The handle of the port
   * @param  State     CAD state
@@ -418,6 +484,7 @@ void USBPD_CAD_Task(void *argument)
   */
 void USBPD_DPM_CADCallback(uint8_t PortNum, USBPD_CAD_EVENT State, CCxPin_TypeDef Cc)
 {
+  USBPD_TRACE_Add(USBPD_TRACE_CADEVENT, PortNum, (uint8_t)State, NULL, 0);
 
   switch (State)
   {
