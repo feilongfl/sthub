@@ -1,5 +1,5 @@
 
-NPROC=16
+NPROC=$(shell nproc)
 
 stm32g431:
 	cd prj/stm32g431rbtx && make -j $(NPROC)
