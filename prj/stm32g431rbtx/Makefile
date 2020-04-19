@@ -152,7 +152,11 @@ SZ = $(PREFIX)size
 endif
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
-CCACHE = /usr/bin/ccache
+
+# disable ccache when ci.
+ifndef GITHUB_ACTION
+	CCACHE = /usr/bin/ccache
+endif
  
 #######################################
 # CFLAGS
